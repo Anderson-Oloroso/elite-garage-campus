@@ -193,3 +193,95 @@ DELIMITER ;
 CALL sp_delete_vehicle(1);
 SELECT * FROM vehicles;
 
+-- =================================================
+-- CRUD Services
+-- =================================================
+
+DELIMITER //
+CREATE PROCEDURE sp_create_service(IN p_name_service VARCHAR(50), IN p_category VARCHAR(50), IN p_base_price FLOAT(7,2), IN p_duration INT)
+BEGIN
+	IF p_name_service IS NULL OR TRIM(p_name_service) = '' THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Por favor ingrese el nombre del nuevo servicio';
+	END IF;
+    IF p_category IS NULL OR TRIM(p_category) = '' THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Por favor Ingrese una categoria válida';
+	END IF;
+    IF p_base_price IS NULL OR p_base_price <=0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Precio base no válido';
+	END IF;
+    IF p_duration IS NULL OR p_duration <= 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La duración no es válida';
+    END IF;
+    INSERT INTO services (name_service, category, base_price, duration_min) VALUES (p_name_service, p_category, p_base_price, p_duration);
+END //
+DELIMITER ;
+
+CALL sp_create_service('Cambio de aceite', 'Mantenimiento preventivo', '300', 30);
+SELECT * FROM services;
+
+DELIMITER //
+CREATE PROCEDURE sp_select_service(IN p_id INT)
+BEGIN 
+	IF p_id IS NULL OR p_id <= 0 THEN 
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EL id no es válido';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM services WHERE id = p_id) THEN 
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No hay ningun servicio con dicho id';
+    END IF;
+    SELECT * FROM services WHERE id = p_id;
+END //
+DELIMITER ;
+
+CALL sp_select_service(11);
+
+
+DELIMITER //
+CREATE PROCEDURE sp_delete_service(IN p_id INT)
+BEGIN
+	IF p_id IS NULL OR p_id <= 0 THEN 
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EL id no es válido';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM services WHERE id = p_id) THEN 
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No hay ningun servicio con dicho id';
+    END IF;
+    IF EXISTS (SELECT * FROM appointments WHERE id = p_id) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No se puede eliminar este servicio debido a que tiene registros vinculados en la tabla citas (appointments)';
+    END IF;
+    DELETE FROM services WHERE id = p_id;
+END //
+DELIMITER ;
+
+CALL sp_delete_service(11);
+SELECT * FROM services;
+
+DELIMITER //
+CREATE PROCEDURE sp_update_service(IN p_id INT,IN p_name_service VARCHAR(50), IN p_category VARCHAR(50), IN p_base_price FLOAT(7,2), IN p_duration INT)
+BEGIN 
+	IF p_id IS NULL OR p_id <= 0 THEN 
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EL id no es válido';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM services WHERE id = p_id) THEN 
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No hay ningun servicio con dicho id';
+    END IF;
+    IF p_name_service IS NULL
+		OR TRIM(p_name_service) = ''
+        OR p_category IS NULL
+        OR TRIM(p_category) = ''
+	THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puede haber ningún campo vacío o nulo';
+    END IF;
+    IF p_base_price <= 0 OR p_base_price IS NULL OR p_duration IS NULL OR p_duration <= 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El precio o la duracion no pueden estar vacios o nulos';
+    END IF;
+    UPDATE services SET
+		name_service = p_name_service,
+        category = p_category,
+        base_price = p_base_price,
+        duration_min = p_duration
+	WHERE id = p_id;
+END //
+DELIMITER ;
+
+CALL sp_update_service(10,'Lavado Premium Plus', 'Estética', 100.00, 60);
+SELECT * FROM services;
+
