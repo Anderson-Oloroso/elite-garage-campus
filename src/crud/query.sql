@@ -285,3 +285,110 @@ DELIMITER ;
 CALL sp_update_service(10,'Lavado Premium Plus', 'Estética', 100.00, 60);
 SELECT * FROM services;
 
+-- =================================================
+-- CRUD Mechanics
+-- =================================================
+
+DELIMITER //
+CREATE PROCEDURE sp_create_mechanic(
+    IN p_name_mechanic VARCHAR(50),
+    IN p_speciality VARCHAR(40),
+    IN p_state ENUM('activo', 'inactivo')
+)
+BEGIN
+    IF p_name_mechanic IS NULL OR TRIM(p_name_mechanic) = '' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Por favor ingrese el nombre del mecánico';
+    END IF;
+
+    IF p_speciality IS NULL OR TRIM(p_speciality) = '' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Por favor ingrese una especialidad válida';
+    END IF;
+
+    IF p_state IS NULL THEN
+        SET p_state = 'activo';
+    END IF;
+
+    INSERT INTO mechanics(name_mechanic, speciality, state)
+    VALUES (p_name_mechanic, p_speciality, p_state);
+END //
+DELIMITER ;
+
+CALL sp_create_mechanic('Juan Pérez', 'Motor', 'activo');
+SELECT * FROM mechanics;
+
+DELIMITER //
+CREATE PROCEDURE sp_select_mechanic(IN p_id INT)
+BEGIN
+    IF p_id IS NULL OR p_id <= 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El id no es válido';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM mechanics WHERE id = p_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No hay ningún mecánico con dicho id';
+    END IF;
+
+    SELECT * FROM mechanics WHERE id = p_id;
+END //
+DELIMITER ;
+
+CALL sp_select_mechanic(1);
+
+DELIMITER //
+CREATE PROCEDURE sp_delete_mechanic(IN p_id INT)
+BEGIN
+    IF p_id IS NULL OR p_id <= 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El id no es válido';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM mechanics WHERE id = p_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No hay ningún mecánico con dicho id';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM appointments WHERE mechanic_id = p_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No se puede eliminar este mecánico debido a que tiene registros vinculados en appointments';
+    END IF;
+
+    DELETE FROM mechanics WHERE id = p_id;
+END //
+DELIMITER ;
+
+SELECT * FROM mechanics;
+
+DELIMITER //
+CREATE PROCEDURE sp_update_mechanic(
+    IN p_id INT,
+    IN p_name_mechanic VARCHAR(50),
+    IN p_speciality VARCHAR(40),
+    IN p_state ENUM('activo', 'inactivo')
+)
+BEGIN
+    IF p_id IS NULL OR p_id <= 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El id no es válido';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM mechanics WHERE id = p_id) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No hay ningún mecánico con dicho id';
+    END IF;
+
+    IF p_name_mechanic IS NULL OR TRIM(p_name_mechanic) = '' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puede haber nombre vacío o nulo';
+    END IF;
+
+    IF p_speciality IS NULL OR TRIM(p_speciality) = '' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No puede haber especialidad vacía o nula';
+    END IF;
+
+    IF p_state IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El estado no puede estar vacío o ser nulo';
+    END IF;
+
+    UPDATE mechanics
+    SET name_mechanic = p_name_mechanic,
+        speciality = p_speciality,
+        state = p_state
+    WHERE id = p_id;
+END //
+DELIMITER ;
+
+CALL sp_update_mechanic(1, 'Juan Pérez', 'Motor', 'inactivo');
+SELECT * FROM mechanics;
